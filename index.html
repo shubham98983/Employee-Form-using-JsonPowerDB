@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Form using JPDB API</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://login2explore.com/jpdb/resources/js/0.0.3/jpdb-commons.js"></script>
+    <style>
+        .form-label { font-weight: bold; }
+        button:disabled {
+    opacity: 0.1;
+}
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="mb-4">Student Form using the JPDB API</h2>
+        <form id="StudentForm">
+            <div class="mb-3">
+                <label for="RollNo" class="form-label">Roll-No:</label>
+                <input type="text" class="form-control" id="RollNo" name="rollNo">
+            </div>
+            <div class="mb-3">
+                <label for="FullName" class="form-label">Full-Name:</label>
+                <input type="text" class="form-control" id="FullName" name="fullName">
+            </div>
+            <div class="mb-3">
+                <label for="Class" class="form-label">Class:</label>
+                <input type="text" class="form-control" id="Class" name="class">
+            </div>
+            <div class="mb-3">
+                <label for="BirthDate" class="form-label">Birth-Date:</label>
+                <input type="text" class="form-control" id="BirthDate" name="birthDate">
+            </div>
+            <div class="mb-3">
+                <label for="Address" class="form-label">Address:</label>
+                <input type="text" class="form-control" id="Address" name="address">
+            </div>
+            <div class="mb-3">
+                <label for="EnrollmentDate" class="form-label">Enrollment-Date:</label>
+                <input type="text" class="form-control" id="EnrollmentDate" name="enrollmentDate">
+            </div>
+            <div class="mb-3">
+                <button type="button" class="btn btn-secondary" id="save">Save</button>
+                <button type="button" class="btn btn-secondary" id="change">Update</button>
+                <button type="button" class="btn btn-secondary" id="reset">Reset</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const connToken = "90934865|-31949258073706540|90958058";
+        const dbName = "SCHOOL-DB";
+        const relName = "STUDENT-TABLE";
+        const jpdbBaseURL = "http://api.login2explore.com:5577";
+        const jpdbIML = "/api/iml";
+        const jpdbIRL = "/api/irl";
+
+        $("#RollNo").focus();
+
+        function saveRecNo2LS(jsonObj) {
+            var lvData = JSON.parse(jsonObj.data);
+            localStorage.setItem('recno', lvData.rec_no);
+        }
+
+        function getRollNoAsJsonObj() {
+            var rollno = $('#RollNo').val();
+            var jsonStr = {
+                "Roll-No": rollno
+            };
+            return JSON.stringify(jsonStr);
+        }
+
+        function fillData(jsonObj) {
+            saveRecNo2LS(jsonObj);
+            var record = JSON.parse(jsonObj.data).record;
+            $("#RollNo").val(record["Roll-No"]);
+            $("#FullName").val(record["Full-Name"]);
+            $("#Class").val(record["Class"]);
+            $("#BirthDate").val(record["Birth-Date"]);
+            $("#Address").val(record["Address"]);
+            $("#EnrollmentDate").val(record["Enrollment-Date"]);
+        }
+
+        function resetForm() {
+            $("#RollNo").val("");
+            $("#FullName").val("");
+            $("#Class").val("");
+            $("#BirthDate").val("");
+            $("#Address").val("");
+            $("#EnrollmentDate").val("");
+            $("#RollNo").prop("disabled", false);
+            $("#save").prop("disabled", true);
+            $("#change").prop("disabled", true);
+            $("#reset").prop("disabled", true);
+            $("#RollNo").focus();
+        }
+
+        function validateData() {
+            var rollno, fullname, studentClass, birthdate, address, enrollmentdate;
+            rollno = $("#RollNo").val();
+            fullname = $("#FullName").val();
+            studentClass = $("#Class").val();
+            birthdate = $("#BirthDate").val();
+            address = $("#Address").val();
+            enrollmentdate = $("#EnrollmentDate").val();
+            
+            if (rollno === "") {
+                alert("Roll-No missing");
+                $("#RollNo").focus();
+                return "";
+            }
+            if (fullname === "") {
+                alert("Full-Name missing");
+                $("#FullName").focus();
+                return "";
+            }
+            if (studentClass === "") {
+                alert("Class missing");
+                $("#Class").focus();
+                return "";
+            }
+            if (birthdate === "") {
+                alert("Birth-Date missing");
+                $("#BirthDate").focus();
+                return "";
+            }
+            if (address === "") {
+                alert("Address missing");
+                $("#Address").focus();
+                return "";
+            }
+            if (enrollmentdate === "") {
+                alert("Enrollment-Date missing");
+                $("#EnrollmentDate").focus();
+                return "";
+            }
+
+            var jsonStrObj = {
+                "Roll-No": rollno,
+                "Full-Name": fullname,
+                "Class": studentClass,
+                "Birth-Date": birthdate,
+                "Address": address,
+                "Enrollment-Date": enrollmentdate
+            };
+            return JSON.stringify(jsonStrObj);
+        }
+
+        function saveData() {
+            var jsonStrObj = validateData();
+            if (jsonStrObj === "") {
+                return "";
+            }
+            var putRequest = createPUTRequest(connToken, jsonStrObj, dbName, relName);
+            jQuery.ajaxSetup({async: false});
+            var resJsonObj = executeCommandAtGivenBaseUrl(putRequest, jpdbBaseURL, jpdbIML);
+            jQuery.ajaxSetup({async: true});
+            resetForm();
+            $('#RollNo').focus();
+        }
+
+        function changeData() {
+            $("#change").prop("disabled", true);
+            jsonChg = validateData();
+            var updateRequest = createUPDATERecordRequest(connToken, jsonChg, dbName, relName, localStorage.getItem("recno"));
+            jQuery.ajaxSetup({async: false});
+            var resJsonObj = executeCommandAtGivenBaseUrl(updateRequest, jpdbBaseURL, jpdbIML);
+            jQuery.ajaxSetup({async: true});
+            console.log(resJsonObj);
+            resetForm();
+            $("#RollNo").focus();
+        }
+
+        function getStudent() {
+            var RollNoJsonObj = getRollNoAsJsonObj();
+            var getRequest = createGET_BY_KEYRequest(connToken, dbName, relName, RollNoJsonObj);
+            jQuery.ajaxSetup({async: false});
+            var resJsonObj = executeCommandAtGivenBaseUrl(getRequest, jpdbBaseURL, jpdbIRL);
+            jQuery.ajaxSetup({async: true});
+            if (resJsonObj.status === 400) {
+                $("#change").prop("disabled", true);
+                $("#save").prop("disabled", false);
+                $("#reset").prop("disabled", false);
+                $("#FullName").focus();
+            } else if (resJsonObj.status === 200) {
+                $("#RollNo").prop("disabled", true);
+                fillData(resJsonObj);
+                $("#change").prop("disabled", false);
+                $("#reset").prop("disabled", false);
+                $("#save").prop("disabled", true);
+                $("#FullName").focus();
+            }
+        }
+
+        $("#RollNo").focus();
+
+        $("#RollNo").on("focusout", function() {
+            getStudent();
+        });
+
+        $("#new").on("click", resetForm);
+        $("#save").on("click", saveData);
+        $("#edit").on("click", function() {
+            $("#RollNo").prop("disabled", false);
+            $("#RollNo").focus();
+        });
+        $("#change").on("click", changeData);
+        $("#reset").on("click", resetForm);
+
+        // Navigation functions (First, Prev, Next, Last) are not implemented in this basic version
+        // You would need to implement these based on your specific requirements and data structure
+    </script>
+</body>
+</html>
